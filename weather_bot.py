@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
 
-AVAILABLE_CITIES = ["Kyiv", "Dnipro", "Lviv"]
+AVAILABLE_CITIES = ["Kyiv", "Dnipro", "Lviv", "Uzhhorod", "Berlin"]
 OPENWEATHERMAP_URL = "https://api.openweathermap.org/data/2.5/weather"
 
 # --- Реалізація Кешування ---
