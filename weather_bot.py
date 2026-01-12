@@ -6,14 +6,14 @@ from dotenv import load_dotenv
 import time
 import logging
 
-# Завантажуємо змінні оточення з .env файлу
+# Loading environment variables from the .env file
 load_dotenv()
 
-# Отримання токенів та ключів
+# Getting tokens and keys
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 API_KEY = os.getenv('API_KEY')
 
-# --- Налаштування логування ---
+# --- Logging settings ---
 LOG_FILE = 'app.log'
 logging.basicConfig(
     level=logging.INFO,
@@ -25,34 +25,34 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
-# --- Кінець Налаштування Логування ---
+# --- End of Logging Settings ---
 
-# Ініціалізація бота
+# Bot initialization
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
 
-# Конфігурація
+# Configuration
 AVAILABLE_CITIES = ["Kyiv", "Dnipro", "Lviv", "Uzhhorod", "Berlin"]
 OPENWEATHERMAP_URL = "https://api.openweathermap.org/data/2.5/weather"
 
-# --- Реалізація Кешування ---
+# --- Caching Implementation ---
 WEATHER_CACHE = {}
-CACHE_DURATION = 10 * 60  # 10 хвилин у секундах
+CACHE_DURATION = 10 * 60  # 10 minutes in seconds
 
 
-# --- Кінець Реалізації Кешування ---
+# --- End of Caching Implementation ---
 
 
 def get_weather_data(city: str) -> dict or None:
     """
-    Отримує дані про погоду для вказаного міста, використовуючи кешування.
+    Gets weather data for the specified city using caching.
     """
     if city in WEATHER_CACHE:
         cache_entry = WEATHER_CACHE[city]
         if (time.time() - cache_entry['timestamp']) < CACHE_DURATION:
-            logger.info(f"CACHE HIT: Погода для {city} отримана з кешу.")
+            logger.info(f"CACHE HIT: Weather for {city} retrieved from cache.")
             return cache_entry['data']
         else:
-            logger.info(f"CACHE EXPIRED: Погода для {city} застарів. Запит до API.")
+            logger.info(f"CACHE EXPIRED: Weather for {city} is out of date. Request to API.")
 
     params = {
         'q': city,
@@ -69,33 +69,33 @@ def get_weather_data(city: str) -> dict or None:
         if response.status_code == 200:
             data = response.json()
             WEATHER_CACHE[city] = {'timestamp': time.time(), 'data': data}
-            logger.info(f"API SUCCESS: Погода для {city} (час виконання: {duration:.2f}секунд. Дані оновлено в кеші.")
+            logger.info(f"API SUCCESS: Weather for {city} (run time: {duration:.2f} seconds. Data refreshed in cache.")
             return data
         else:
-            logger.error(f"API FAILURE: Помилка API для {city}: Статус {response.status_code}.")
+            logger.error(f"API FAILURE: API error for {city}: Status {response.status_code}.")
             return None
     except requests.exceptions.RequestException as error:
-        print(f"Помилка з'єднання: {error}")
+        print(f"Connection error: {error}")
         return None
 
 
 def format_weather_message(data: dict) -> str:
     """
-    Форматує сирі дані про погоду в читабельне повідомлення.
+    Formats raw weather data into a readable message.
     """
     if not data:
-        return "Не вдалося отримати дані про погоду."
+        return "Failed to retrieve weather data."
 
-    city_name = data.get('name', 'Невідоме місто')
+    city_name = data.get('name', 'Unknown city')
     temp = round(data['main']['temp'])
     humidity = data['main']['humidity']
     description = data['weather'][0]['description']
 
     message = (
-        f"📍 Погода в місті {city_name}:\n"
-        f"🌡️ Температура: {temp}°C\n"
-        f"💧 Вологість: {humidity}%\n"
-        f"☁️ Опис: {description.capitalize()}"
+        f"📍 Weather in city {city_name}:\n"
+        f"🌡️ Temperature: {temp}°C\n"
+        f"💧 Humidity: {humidity}%\n"
+        f"☁️ Describe: {description.capitalize()}"
     )
 
     return message
@@ -104,7 +104,7 @@ def format_weather_message(data: dict) -> str:
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     """
-    Обробляє команду /start. Створює кнопки міст
+    Processes the /start command. Creates cities buttons
     """
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=False)
     for city in AVAILABLE_CITIES:
@@ -112,24 +112,22 @@ def send_welcome(message):
 
     bot.send_message(
         message.chat.id,
-        "👋 Привіт! Я бот-синоптик. Обери місто зі списку нижче, щоб отримати актуальний прогноз погоди:\n\n"
-        "Спробуй команду /help, щоб дізнатися більше про мене.",
+        "👋Hello! I'm a weather bot. Select a city from the list below to get the latest weather forecast:\n\n"
+                "Try the /help command to learn more about me.",
         reply_markup=markup
     )
 
 
 @bot.message_handler(commands=['help'])
 def send_help(message):
-    """
-    Обробляє команду /help. Надсилає довідкову інформацію.
-    """
+    """ Processes the /help command. Sends help information. """
     help_message = (
-        "📖 *Доступні команди:*\n\n"
-        "/start - Розпочати роботу з ботом та показати кнопки вибору міст.\n"
-        "/help - Показати цей список команд.\n\n"
-        "*Вибір міста:*\n"
-        "Просто оберіть одне з міст, доступних на кнопках: "
-        f"*{', '.join(AVAILABLE_CITIES)}*. Я покажу актуальну погоду, використовуючи кешовані дані (оновлюються кожні 10 хвилин)."
+        "📖 *Available commands:*\n\n"
+        "/start - Start the bot and show the city selection buttons.\n"
+        "/help - Show this list of commands.\n\n"
+        "*City selection:*\n"
+        "Simply choose one of the cities available on the buttons: "
+        f"*{', '.join(AVAILABLE_CITIES)}*. I will show the current weather using cached data (updated every 10 minutes)."
     )
     bot.send_message(
         message.chat.id,
@@ -141,7 +139,7 @@ def send_help(message):
 @bot.message_handler(content_types=['text'])
 def handle_city_request(message):
     """
-    Обробляє текстові повідомлення користувача (вибір міста).
+    Processes user text messages (city selection).
     """
     city_name = message.text.strip()
 
@@ -153,13 +151,13 @@ def handle_city_request(message):
     else:
         bot.send_message(
             message.chat.id,
-            "Будь ласка, обери місто зі списку, використовуючи кнопки нижче, або скористайся командою /start."
+            "Please select a city from the list using the buttons below, or use the /start command."
         )
 
 
 if __name__ == '__main__':
-    logger.info("Бот запущено. Для зупинки натисніть Ctrl+C.")
+    logger.info("Bot is running. Press Ctrl+C to stop.")
     try:
         bot.polling(none_stop=True)
     except Exception as ex:
-        logger.critical(f"Критична помилка під час роботи бота: {ex}")
+        logger.critical(f"Critical error while running the bot: {ex}")
